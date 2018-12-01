@@ -1,0 +1,48 @@
+# 各種ビルド処理・CI実行可能なフルセットのkarte-io実行環境
+
+ARG ENV_VERSION
+ARG BASE_REPOSITORY
+
+################
+FROM $BASE_REPOSITORY:$ENV_VERSION
+
+MAINTAINER Naoto Kato <naoto.kato@plaid.co.jp>
+
+USER root
+
+# build tools
+# コンパイルに必要なツールの導入 / 作業用ツールのインストール
+RUN \
+  apt-get update && \
+  apt-get install -y sudo git ssh tar ca-certificates host curl netcat gcc g++ make && \
+  apt-get clean
+
+# sudo設定
+RUN \
+  echo "ubuntu ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# develop tools
+RUN \
+  apt-get update \
+  && apt-get install -y supervisor \
+  && apt-get clean
+
+USER ubuntu
+
+RUN \
+  mkdir /home/ubuntu/.ssh
+
+COPY settings/deploy.key /home/ubuntu/.ssh/id_rsa
+COPY settings/known_hosts /home/ubuntu/.ssh/known_hosts
+
+RUN \
+  sudo chown -R ubuntu:ubuntu /home/ubuntu/.ssh && \
+  chmod 0700 /home/ubuntu/.ssh && \
+  chmod 0600 /home/ubuntu/.ssh/id_rsa
+
+RUN \
+  git config --global user.email "test@example.com" && \
+  git config --global user.name "docker image builder"
+
+
+WORKDIR /home/ubuntu/karte-dev

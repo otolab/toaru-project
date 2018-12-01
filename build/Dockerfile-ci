@@ -1,0 +1,43 @@
+# ブランチごとのCIで都度作成されるImage。CircleCIの中で作成される
+
+ARG REPOSITORY
+ARG PREV_TARGET_VERSION
+ARG BUILD_TARGET
+
+################
+FROM $REPOSITORY:release-$PREV_TARGET_VERSION
+
+MAINTAINER Naoto Kato <naoto.kato@plaid.co.jp>
+
+USER ubuntu
+
+WORKDIR /home/ubuntu/toaru-project
+
+COPY rebuild.touch /tmp/
+
+ARG BUILD_TARGET
+
+RUN \
+  git remote add branch-origin git@github.com:otolab/toaru-project.git \
+  && git fetch --depth 1 branch-origin $BUILD_TARGET \
+  && git checkout . \
+  && git checkout FETCH_HEAD \
+  && rm -rf .git
+
+RUN \
+  cd namespaces/server \
+  && npm install \
+  && npm cache clean --force \
+  && sudo rm -rf /tmp/*
+
+RUN \
+  cd namespaces/front \
+  && npm install \
+  && npm run lint \
+  && npm run build \
+  && npm run copy-to-public \
+  && npm cache clean --force \
+  && sudo rm -rf /tmp/*
+
+
+ENTRYPOINT [ "/home/ubuntu/toaru-project/entrypoint.sh" ]

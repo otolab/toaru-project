@@ -1,0 +1,37 @@
+# minimumなkarte-io実行環境
+
+FROM buildpack-deps:xenial-scm
+
+MAINTAINER Naoto Kato <naoto.kato@plaid.co.jp>
+
+ENV DEBIAN_FRONTEND 'noninteractive'
+
+ENV NPM_CONFIG_LOGLEVEL info
+ENV NODE_VERSION 10.14.1
+ENV NPM_VERSION 6.4.1
+
+# node のインストール
+RUN curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz" \
+  && tar -xf "node-v$NODE_VERSION-linux-x64.tar.gz" -C /usr/local --strip-components=1 \
+  && rm node-v$NODE_VERSION-linux-x64.tar.gz \
+  && npm install -g npm@$NPM_VERSION \
+  && npm cache clean -f && rm -rf /tmp/npm-* && rm -rf ~/tmp
+
+# karteの実行に必要な外部ファイルの追加
+# TODO: もっと減らしたい。とくにthumbnail作成周りは別に分ける
+RUN \
+  apt-get update && \
+  apt-get install -y apt-utils && \
+  apt-get clean
+
+# 作業ユーザの作成
+RUN \
+  useradd -m -d /home/ubuntu -s /bin/bash ubuntu && \
+  echo 'ubuntu:ubuntu' | chpasswd
+
+# 作業ユーザを切り替え
+USER ubuntu
+
+WORKDIR /home/ubuntu/
+
+ENTRYPOINT [ "tail", "-f", "/dev/null" ]

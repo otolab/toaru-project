@@ -1,0 +1,78 @@
+version: 2
+jobs:
+  build-images:
+    working_directory: ~/project
+    machine:
+      enabled: true
+      # docker_layer_caching: false # optional
+    resource_class: large
+
+    steps:
+      - run:
+          name: clone
+          command: |
+            echo "machine github.com login $GITHUB_API_TOKEN" > ~/.netrc
+            repository_https_url=$(echo $CIRCLE_REPOSITORY_URL | sed -e "s|git@github.com:|https://github.com/|")
+            echo $repository_https_url
+            git clone --branch $CIRCLE_BRANCH --single-branch $repository_https_url .
+      - run:
+          name: docker login
+          command: docker login -u "$DOCKERHUB_USERNAME" -p "$DOCKERHUB_PASSWORD"
+      - run:
+          name: build and push
+          command: |
+            cd ./build
+            ./build.sh $CIRCLE_BRANCH ci-$CIRCLE_WORKFLOW_WORKSPACE_ID
+
+  container-test:
+    parallelism: 4
+    working_directory: ~/toaru-project
+    environment:
+      - E2E_HEADLESS_CHROME_USAGE: "true"
+      - E2E_CONTAINER_HOST: 'localhost'
+      - SELENIUM_REMOTE_URL: 'http://localhost:4444/wd/hub'
+
+    docker:
+      # primary container
+      - image: otolab/toaru-project:ci-$CIRCLE_WORKFLOW_WORKSPACE_ID
+        auth:
+          username: $DOCKERHUB_USERNAME
+          password: $DOCKERHUB_PASSWORD
+      # selenium grid。名前無しで実行してlocalhost:4444にバインドされる
+      - image: selenium/standalone-chrome
+
+    steps:
+      - run:
+          name: e2e-server
+          command: server
+          background: true
+      - run:
+          name: wait for 8000
+          command: ./scripts/wait_for.sh port 8000 360
+      - run:
+          name: unit tests
+          command: |
+            circleci tests glob "test/**/*.js" | \
+              circleci tests split --split-by=timings > ut-targets.tmp
+            cat ut-targets.tmp
+            __circleci_script/run_tests.sh < ut-targets.tmp
+      - run:
+          name: e2e tests
+          command: |
+            circleci tests glob "e2e-test/*.coffee" | \
+              circleci tests split > e2e-targets.tmp
+            cat e2e-targets.tmp
+            __circleci_script/run_tests.sh < e2e-targets.tmp
+      - store_test_results:
+          path: .log/report-xml
+      - store_artifacts:
+          path: .log
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build-images
+      - container-test:
+          requires:
+            - build-images

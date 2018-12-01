@@ -1,0 +1,20 @@
+version: '3'
+
+services:
+
+  server:
+    image: otolab/toaru-project-base:dev-1.0.0
+    working_dir: /home/ubuntu/toaru-project
+    volumes:
+      - ./:/home/ubuntu/toaru-project/:delegated
+      - node-modules-server:/home/ubuntu/toaru-project/namespaces/server/node_modules
+      - node-modules-front:/home/ubuntu/toaru-project/namespaces/front/node_modules
+    ports:
+      - 8000:8000
+    cap_add:
+      - SYS_TIME
+      - SYS_ADMIN
+
+volumes:
+  node-modules-server:
+  node-modules-front:

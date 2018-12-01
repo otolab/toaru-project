@@ -1,0 +1,33 @@
+# karte-ioが実行可能な最小セット。releaseごとに作る
+
+ARG REPOSITORY
+ARG BASE_REPOSITORY
+ARG ENV_VERSION
+ARG CI_BUILD
+ARG BUILD_TARGET
+
+#################
+FROM REPOSITORY:ci-$CI_BUILD as builder
+
+WORKDIR /home/ubuntu/toaru-project
+
+COPY rebuild.touch /tmp/
+
+# 必要なもの以外消す
+RUN \
+  cd namespaces/server \
+  npm prune --production
+
+RUN \
+  rm -rf node_modules/ namespaces/front 
+
+######################
+FROM plaid/karte-io-base:$ENV_VERSION
+
+MAINTAINER Naoto Kato <naoto.kato@plaid.co.jp>
+
+COPY --from=builder --chown=ubuntu:ubuntu /home/ubuntu/toaru-project /home/ubuntu/toaru-project
+
+WORKDIR /home/ubuntu/toaru-project
+
+ENTRYPOINT [ "/home/ubuntu/toaru-project/entrypoint.sh" ]

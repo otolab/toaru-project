@@ -1,0 +1,43 @@
+# 必要に応じてdevelopからフルビルドされたImageを作成
+
+ARG BASE_REPOSITORY
+ARG BUILD_ENV_VERSION
+ARG BUILD_TARGET
+
+################
+FROM $BASE_REPOSITORY:dev-$BUILD_ENV_VERSION
+
+MAINTAINER Naoto Kato <naoto.kato@plaid.co.jp>
+
+ARG BUILD_TARGET
+
+USER ubuntu
+
+WORKDIR /home/ubuntu
+
+# TODO: branchの更新に従ってキャッシュを捨てて再実行
+
+RUN \
+  git clone --depth 1 --branch $BUILD_TARGET --single-branch git@github.com:otolab/toaru-project.git
+
+WORKDIR /home/ubuntu/toaru-project
+
+RUN \
+  npm install \
+  && npm cache clean --force \
+  && sudo rm -rf /tmp/*
+
+RUN \
+  cd namespaces/server \
+  && npm install \
+  && npm cache clean --force \
+  && sudo rm -rf /tmp/*
+
+RUN \
+  cd namespaces/front \
+  && npm install \
+  && npm run lint \
+  && npm run build \
+  && npm run copy-to-public \
+  && npm cache clean --force \
+  && sudo rm -rf /tmp/*
