@@ -4,6 +4,7 @@ cd $(dirname $BASH_SOURCE)
 
 set -e
 
+# もし試す場合はpush可能なdockerリポジトリを作ってから行ってください
 REPOSITORY="otolab/toaru-project"
 BASE_REPOSITORY="otolab/toaru-project-base"
 
@@ -58,7 +59,9 @@ function check_and_pull {
 if ! check_and_pull $BASE_REPOSITORY:$ENV_VERSION; then
   docker build -t $BASE_REPOSITORY:$ENV_VERSION \
     -f Dockerfile-base  .
-  docker push $BASE_REPOSITORY:$ENV_VERSION
+  if ! docker push $BASE_REPOSITORY:$ENV_VERSION; then
+    echo 'docker pushできませんでいした。push可能なリポジトリを指定してください'
+  fi
 fi
 
 # 開発用実行環境の構築
@@ -67,7 +70,9 @@ if ! check_and_pull $BASE_REPOSITORY:dev-$BUILD_ENV_VERSION; then
     --build-arg BASE_REPOSITORY=$BASE_REPOSITORY \
     --build-arg ENV_VERSION=$ENV_VERSION \
     -f Dockerfile-develop-base  .
-  docker push $BASE_REPOSITORY:dev-$BUILD_ENV_VERSION
+  if ! docker push $BASE_REPOSITORY:dev-$BUILD_ENV_VERSION; then
+    echo 'docker pushできませんでいした。push可能なリポジトリを指定してください'
+  fi
 fi
 
 # 分岐元のフルreleaseブランチを作る
@@ -78,7 +83,9 @@ if ! check_and_pull $REPOSITORY:release-$PREV_TARGET_VERSION; then
     --build-arg BUILD_ENV_VERSION=$BUILD_ENV_VERSION \
     --build-arg BUILD_TARGET=$PREV_TARGET_VERSION \
     -f Dockerfile-develop .
-  docker push $REPOSITORY:release-$PREV_TARGET_VERSION
+  if ! docker push $REPOSITORY:release-$PREV_TARGET_VERSION; then
+    echo 'docker pushできませんでいした。push可能なリポジトリを指定してください'
+  fi
 fi
 
 # 今回のCIのターゲットとなるImageの作成
@@ -88,7 +95,9 @@ docker build -t $REPOSITORY:ci-$BUILD_VERSION \
   --build-arg BUILD_TARGET=$BUILD_TARGET \
   --build-arg PREV_TARGET_VERSION=$PREV_TARGET_VERSION \
   -f Dockerfile-ci .
-docker push $REPOSITORY:ci-$BUILD_VERSION
+if ! docker push $REPOSITORY:ci-$BUILD_VERSION; then
+  echo 'docker pushできませんでいした。push可能なリポジトリを指定してください'
+fi
 
 # ブランチがreleaseブランチであるとき、production Imageを作成する
 if [ ${BUILD_TARGET%%/*} = 'release' ]; then
@@ -100,6 +109,8 @@ if [ ${BUILD_TARGET%%/*} = 'release' ]; then
     --build-arg BUILD_TARGET=$BUILD_TARGET \
     --build-arg CI_BUILD=ci-$BUILD_VERSION \
     -f Dockerfile-production .
-  docker push $REPOSITORY:production-$RELEASE_VERSION
+  if ! docker push $REPOSITORY:production-$RELEASE_VERSION; then
+    echo 'docker pushできませんでいした。push可能なリポジトリを指定してください'
+  fi
 fi
 
