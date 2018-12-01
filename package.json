@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "test": "mocha test",
-    "server": "cd namespaces/server && npm run server"
+    "server": "cd namespaces/server && npm run server",
+    "setup": "sudo chown ubuntu:ubuntu namespaces/front/node_modules && sudo chown ubuntu:ubuntu namespaces/front/node_modules && (cd namespaces/front && npm install) && (cd namespaces/server && npm install)"
   },
   "repository": {
     "type": "git",

@@ -27,6 +27,12 @@ $ build/build.sh <branch> [<image-revision>]
 $ docker-compose up -d
 ```
 
+### 開発環境のセットアップ
+
+```
+$ docker-compose exec server npm run setup
+```
+
 ### 開発環境の中で作業する
 
 ```
